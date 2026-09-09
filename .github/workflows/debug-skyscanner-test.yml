@@ -7,23 +7,24 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolver aeroportos e testar busca
+      - name: Testar busca de voo ida e volta
         env:
           KEY: ${{ secrets.RAPIDAPI_KEY }}
         run: |
-          echo "=== searchAirport: Manaus ==="
-          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
-            --data-urlencode "query=Manaus" \
-            --data-urlencode "locale=pt-BR" \
+          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v2/flights/searchFlightsWebComplete" \
+            --data-urlencode "originSkyId=MAO" \
+            --data-urlencode "destinationSkyId=MCO" \
+            --data-urlencode "originEntityId=95674366" \
+            --data-urlencode "destinationEntityId=95674009" \
+            --data-urlencode "cabinClass=economy" \
+            --data-urlencode "adults=1" \
+            --data-urlencode "sortBy=cheapest" \
+            --data-urlencode "currency=BRL" \
+            --data-urlencode "market=BR" \
+            --data-urlencode "countryCode=BR" \
+            --data-urlencode "date=2027-01-15" \
+            --data-urlencode "returnDate=2027-01-25" \
             -H "X-RapidAPI-Key: $KEY" \
             -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
-            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2000
-          echo
-          echo "=== searchAirport: Orlando ==="
-          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
-            --data-urlencode "query=Orlando" \
-            --data-urlencode "locale=pt-BR" \
-            -H "X-RapidAPI-Key: $KEY" \
-            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
-            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2000
+            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 3000
           echo
