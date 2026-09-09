@@ -1,0 +1,40 @@
+name: Debug Travelpayouts API
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Testar disponibilidade de dados por mes
+        env:
+          TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+        run: |
+          test_route() {
+            origin=$1
+            destination=$2
+            depart=$3
+            resp=$(curl -s -G "https://api.travelpayouts.com/v2/prices/month-matrix" \
+              --data-urlencode "currency=brl" \
+              --data-urlencode "origin=$origin" \
+              --data-urlencode "destination=$destination" \
+              --data-urlencode "depart_date=$depart" \
+              --data-urlencode "show_to_affiliates=true" \
+              -H "X-Access-Token: $TOKEN")
+            count=$(echo "$resp" | grep -o '"depart_date"' | wc -l)
+            echo "$origin -> $destination depart_date=$depart : $count resultado(s)"
+          }
+          echo "=== MAO -> GRU (rota facil, varios meses) ==="
+          test_route MAO GRU 2026-10
+          test_route MAO GRU 2026-12
+          test_route MAO GRU 2027-01
+          test_route MAO GRU 2027-02
+          test_route MAO GRU 2027-04
+          echo "=== outros destinos, 2027-01 ==="
+          test_route MAO PTY 2027-01
+          test_route MAO SCL 2027-01
+          test_route MAO MIA 2027-01
+          test_route MAO MCO 2027-01
+          test_route MAO AUA 2027-01
+          test_route MAO CUR 2027-01
