@@ -22,8 +22,8 @@ jobs:
             --data-urlencode "currency=BRL" \
             --data-urlencode "market=BR" \
             --data-urlencode "countryCode=BR" \
-            --data-urlencode "date=2027-01-15" \
-            --data-urlencode "returnDate=2027-01-25" \
+            --data-urlencode "date=2026-10-15" \
+            --data-urlencode "returnDate=2026-10-25" \
             -H "X-RapidAPI-Key: $KEY" \
             -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
             -w "\nHTTP_STATUS:%{http_code}\n" | head -c 3000
