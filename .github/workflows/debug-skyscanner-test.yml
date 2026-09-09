@@ -16,7 +16,7 @@ jobs:
             --data-urlencode "destinationSkyId=MCO" \
             --data-urlencode "originEntityId=95674366" \
             --data-urlencode "destinationEntityId=95674009" \
-            --data-urlencode "cabinClass=economy" \
+            --data-urlencode "cabinClass=xxxinvalidxxx" \
             --data-urlencode "adults=1" \
             --data-urlencode "sortBy=price_low" \
             --data-urlencode "currency=BRL" \
