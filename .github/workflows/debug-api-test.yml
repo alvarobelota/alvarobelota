@@ -14,18 +14,19 @@ jobs:
           test_route() {
             origin=$1
             destination=$2
-            echo "=== $origin -> $destination ==="
+            depart=$3
+            ret=$4
+            echo "=== $origin -> $destination (depart_date=$depart return_date=$ret) ==="
             curl -s -G "https://api.travelpayouts.com/v2/prices/month-matrix" \
               --data-urlencode "currency=brl" \
               --data-urlencode "origin=$origin" \
               --data-urlencode "destination=$destination" \
-              --data-urlencode "depart_date=2027-01" \
+              --data-urlencode "depart_date=$depart" \
+              --data-urlencode "return_date=$ret" \
               --data-urlencode "show_to_affiliates=true" \
               -H "X-Access-Token: $TOKEN" \
-              -w "\nHTTP_STATUS:%{http_code}\n" | head -c 1000
+              -w "\nHTTP_STATUS:%{http_code}\n" | head -c 1500
             echo
           }
-          test_route GRU MIA
-          test_route GRU LIS
-          test_route MAO GRU
-          test_route MAO MIA
+          test_route GRU MIA 2026-10 2026-11
+          test_route MAO GRU 2026-10 2026-11
