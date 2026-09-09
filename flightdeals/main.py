@@ -54,7 +54,7 @@ def run() -> None:
                     continue
                 if not (settings.date_start.isoformat() <= depart_date <= settings.date_end.isoformat()):
                     continue
-                if price > settings.price_threshold:
+                if price > destination.price_threshold_brl:
                     continue
 
                 key = deal_key(destination.code, depart_date, return_date, price)

@@ -2,7 +2,7 @@ name: Flight deals check
 
 on:
   schedule:
-    - cron: "0 11 * * *" # todo dia às 11:00 UTC (~08:00 em BRT)
+    - cron: "0 0,12 * * *" # 2x ao dia: 00:00 e 12:00 UTC (~20:00 e 08:00 em Manaus, UTC-4)
   workflow_dispatch: {}
 
 permissions:

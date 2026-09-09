@@ -1,0 +1,35 @@
+# Critérios de busca do Álvaro. Não tem segredo aqui, então fica versionado normalmente.
+
+origin: MAO               # Manaus (AM) - Aeroporto Eduardo Gomes
+currency: brl
+
+destinations:
+  - code: GRU
+    name: São Paulo
+    price_threshold_brl: 900
+  - code: PTY
+    name: Panamá
+    price_threshold_brl: 3200
+  - code: SCL
+    name: Chile (Santiago)
+    price_threshold_brl: 3200
+  - code: MIA
+    name: Miami
+    price_threshold_brl: 3500
+  - code: MCO
+    name: Orlando
+    price_threshold_brl: 3800
+  - code: AUA
+    name: Aruba
+    price_threshold_brl: 4000
+  - code: CUR
+    name: Curaçao
+    price_threshold_brl: 4200
+
+date_range:
+  start: 2027-01-01
+  end: 2027-04-30
+
+one_way: false             # ida e volta
+
+check_frequency_hours: 12  # 2x ao dia

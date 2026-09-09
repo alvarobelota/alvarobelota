@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parent.parent
 class Destination:
     code: str
     name: str
+    price_threshold_brl: float
 
 
 @dataclass
@@ -25,7 +26,6 @@ class Settings:
     date_start: date
     date_end: date
     one_way: bool
-    price_threshold: float
     check_frequency_hours: int
     travelpayouts_token: str
     telegram_bot_token: str
@@ -67,7 +67,6 @@ def load_settings(config_path: Path | None = None) -> Settings:
         date_start=raw["date_range"]["start"],
         date_end=raw["date_range"]["end"],
         one_way=bool(raw.get("one_way", False)),
-        price_threshold=float(raw["price_threshold_brl"]),
         check_frequency_hours=int(raw.get("check_frequency_hours", 24)),
         travelpayouts_token=travelpayouts_token,
         telegram_bot_token=telegram_bot_token,
