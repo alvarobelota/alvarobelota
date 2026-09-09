@@ -15,13 +15,12 @@ jobs:
             origin=$1
             destination=$2
             echo "=== $origin -> $destination ==="
-            curl -s -G "https://api.travelpayouts.com/v1/prices/month-matrix" \
+            curl -s -G "https://api.travelpayouts.com/v2/prices/month-matrix" \
               --data-urlencode "currency=brl" \
               --data-urlencode "origin=$origin" \
               --data-urlencode "destination=$destination" \
-              --data-urlencode "month=2027-01-01" \
+              --data-urlencode "depart_date=2027-01" \
               --data-urlencode "show_to_affiliates=true" \
-              --data-urlencode "one_way=false" \
               -H "X-Access-Token: $TOKEN" \
               -w "\nHTTP_STATUS:%{http_code}\n" | head -c 1000
             echo
