@@ -7,48 +7,58 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Resolver GRU e MIA, depois testar busca
+      - name: Resolver aeroportos (tipo AIRPORT) e testar busca
         env:
           KEY: ${{ secrets.RAPIDAPI_KEY }}
         run: |
-          echo "=== searchAirport GRU ==="
-          gru=$(curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
-            --data-urlencode "query=Sao Paulo Guarulhos" \
-            --data-urlencode "locale=en-US" \
-            -H "X-RapidAPI-Key: $KEY" \
-            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com")
-          echo "$gru" | head -c 800
-          echo
-          gru_sky=$(echo "$gru" | grep -o '"skyId":"[A-Z]*"' | head -1 | cut -d'"' -f4)
-          gru_entity=$(echo "$gru" | grep -o '"entityId":"[0-9]*"' | head -1 | cut -d'"' -f4)
-          echo "GRU parsed: skyId=$gru_sky entityId=$gru_entity"
+          python3 <<'PYEOF'
+          import json
+          import urllib.request
+          import urllib.parse
+          import os
 
-          echo "=== searchAirport MIA ==="
-          mia=$(curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
-            --data-urlencode "query=Miami" \
-            --data-urlencode "locale=en-US" \
-            -H "X-RapidAPI-Key: $KEY" \
-            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com")
-          echo "$mia" | head -c 800
-          echo
-          mia_sky=$(echo "$mia" | grep -o '"skyId":"[A-Z]*"' | head -1 | cut -d'"' -f4)
-          mia_entity=$(echo "$mia" | grep -o '"entityId":"[0-9]*"' | head -1 | cut -d'"' -f4)
-          echo "MIA parsed: skyId=$mia_sky entityId=$mia_entity"
+          KEY = os.environ["KEY"]
+          HOST = "sky-scrapper.p.rapidapi.com"
 
-          echo "=== searchFlightsWebComplete GRU -> MIA ==="
-          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v2/flights/searchFlightsWebComplete" \
-            --data-urlencode "originSkyId=$gru_sky" \
-            --data-urlencode "destinationSkyId=$mia_sky" \
-            --data-urlencode "originEntityId=$gru_entity" \
-            --data-urlencode "destinationEntityId=$mia_entity" \
-            --data-urlencode "cabinClass=economy" \
-            --data-urlencode "adults=1" \
-            --data-urlencode "sortBy=price_low" \
-            --data-urlencode "currency=BRL" \
-            --data-urlencode "market=BR" \
-            --data-urlencode "countryCode=BR" \
-            --data-urlencode "date=2026-10-15" \
-            -H "X-RapidAPI-Key: $KEY" \
-            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
-            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2500
-          echo
+          def get(path, params):
+              url = f"https://{HOST}{path}?{urllib.parse.urlencode(params)}"
+              req = urllib.request.Request(url, headers={
+                  "X-RapidAPI-Key": KEY,
+                  "X-RapidAPI-Host": HOST,
+              })
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      return resp.status, json.loads(resp.read())
+              except urllib.error.HTTPError as e:
+                  return e.code, json.loads(e.read())
+
+          def resolve_airport(query):
+              status, payload = get("/api/v1/flights/searchAirport", {"query": query, "locale": "en-US"})
+              for item in payload.get("data", []):
+                  nav = item["navigation"]
+                  if nav["entityType"] == "AIRPORT":
+                      params = nav["relevantFlightParams"]
+                      return params["skyId"], params["entityId"]
+              raise RuntimeError(f"Nenhum AIRPORT encontrado pra {query}: {payload}")
+
+          gru_sky, gru_entity = resolve_airport("Sao Paulo Guarulhos")
+          print(f"GRU: skyId={gru_sky} entityId={gru_entity}")
+          mia_sky, mia_entity = resolve_airport("Miami")
+          print(f"MIA: skyId={mia_sky} entityId={mia_entity}")
+
+          status, payload = get("/api/v2/flights/searchFlightsWebComplete", {
+              "originSkyId": gru_sky,
+              "destinationSkyId": mia_sky,
+              "originEntityId": gru_entity,
+              "destinationEntityId": mia_entity,
+              "cabinClass": "economy",
+              "adults": 1,
+              "sortBy": "price_low",
+              "currency": "BRL",
+              "market": "BR",
+              "countryCode": "BR",
+              "date": "2026-10-15",
+          })
+          print(f"HTTP {status}")
+          print(json.dumps(payload)[:2500])
+          PYEOF
