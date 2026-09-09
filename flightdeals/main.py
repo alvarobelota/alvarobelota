@@ -24,6 +24,18 @@ def months_between(start: date, end: date) -> list[date]:
     return months
 
 
+def cheapest_in_range(entries: list[dict], date_start: date, date_end: date) -> dict | None:
+    """Entre os trechos retornados, acha o mais barato com partida dentro do range."""
+    candidates = [
+        e for e in entries
+        if e.get("depart_date") and e.get("value") is not None
+        and date_start.isoformat() <= e["depart_date"] <= date_end.isoformat()
+    ]
+    if not candidates:
+        return None
+    return min(candidates, key=lambda e: e["value"])
+
+
 def run() -> None:
     settings = load_settings()
     client = TravelpayoutsClient(settings.travelpayouts_token)
@@ -35,50 +47,73 @@ def run() -> None:
     for destination in settings.destinations:
         for month in months_between(settings.date_start, settings.date_end):
             try:
-                entries = client.month_matrix(
-                    origin=settings.origin,
-                    destination=destination.code,
-                    month=month,
-                    currency=settings.currency,
-                    one_way=settings.one_way,
+                outbound_entries = client.month_matrix(
+                    origin=settings.origin, destination=destination.code,
+                    month=month, currency=settings.currency,
                 )
             except Exception as exc:
                 print(f"Erro consultando {settings.origin}->{destination.code} em {month}: {exc}")
                 continue
 
-            for entry in entries:
-                depart_date = entry.get("depart_date")
-                return_date = entry.get("return_date")
-                price = entry.get("value")
-                if depart_date is None or price is None:
-                    continue
-                if not (settings.date_start.isoformat() <= depart_date <= settings.date_end.isoformat()):
-                    continue
-                if price > destination.price_threshold_brl:
+            outbound = cheapest_in_range(outbound_entries, settings.date_start, settings.date_end)
+            if outbound is None:
+                continue
+
+            if settings.one_way:
+                total = outbound["value"]
+                inbound = None
+            else:
+                try:
+                    inbound_entries = client.month_matrix(
+                        origin=destination.code, destination=settings.origin,
+                        month=month, currency=settings.currency,
+                    )
+                except Exception as exc:
+                    print(f"Erro consultando {destination.code}->{settings.origin} em {month}: {exc}")
                     continue
 
-                key = deal_key(destination.code, depart_date, return_date, price)
-                if key in seen:
+                inbound = cheapest_in_range(inbound_entries, settings.date_start, settings.date_end)
+                if inbound is None:
                     continue
+                total = outbound["value"] + inbound["value"]
 
-                seen.add(key)
-                found_deals.append({
-                    "destination": destination,
-                    "depart_date": depart_date,
-                    "return_date": return_date,
-                    "price": price,
-                })
+            if total > destination.price_threshold_brl:
+                continue
+
+            key = deal_key(
+                destination.code, outbound["depart_date"],
+                inbound["depart_date"] if inbound else None, total,
+            )
+            if key in seen:
+                continue
+
+            seen.add(key)
+            found_deals.append({
+                "destination": destination,
+                "outbound": outbound,
+                "inbound": inbound,
+                "total": total,
+            })
 
     if found_deals:
         for deal in found_deals:
             dest = deal["destination"]
+            outbound = deal["outbound"]
             msg_lines = [
                 f"✈️ *Oferta encontrada: {settings.origin} → {dest.name} ({dest.code})*",
-                f"Ida: {deal['depart_date']}",
+                f"Ida: {outbound['depart_date']} — {outbound['value']} {settings.currency.upper()}",
             ]
-            if deal["return_date"]:
-                msg_lines.append(f"Volta: {deal['return_date']}")
-            msg_lines.append(f"Preço: {deal['price']} {settings.currency.upper()}")
+            if deal["inbound"]:
+                inbound = deal["inbound"]
+                msg_lines.append(
+                    f"Volta: {inbound['depart_date']} — {inbound['value']} {settings.currency.upper()}"
+                )
+                msg_lines.append(
+                    f"Total estimado (ida + volta somadas): {deal['total']} {settings.currency.upper()}"
+                )
+            else:
+                msg_lines.append(f"Total: {deal['total']} {settings.currency.upper()}")
+            msg_lines.append("_(preços de trechos avulsos somados — confirme o valor real ao comprar)_")
             notifier.send("\n".join(msg_lines))
         save_seen(seen)
         print(f"{len(found_deals)} oferta(s) nova(s) encontrada(s) e notificada(s).")
