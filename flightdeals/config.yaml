@@ -6,25 +6,25 @@ currency: brl
 destinations:
   - code: GRU
     name: São Paulo
-    price_threshold_brl: 900
+    price_threshold_brl: 7000
   - code: PTY
     name: Panamá
-    price_threshold_brl: 3200
+    price_threshold_brl: 7000
   - code: SCL
     name: Chile (Santiago)
-    price_threshold_brl: 3200
+    price_threshold_brl: 7000
   - code: MIA
     name: Miami
-    price_threshold_brl: 3500
+    price_threshold_brl: 7000
   - code: MCO
     name: Orlando
-    price_threshold_brl: 3800
+    price_threshold_brl: 7000
   - code: AUA
     name: Aruba
-    price_threshold_brl: 4000
+    price_threshold_brl: 7000
   - code: CUR
     name: Curaçao
-    price_threshold_brl: 4200
+    price_threshold_brl: 7000
 
 date_range:
   start: 2027-01-01
