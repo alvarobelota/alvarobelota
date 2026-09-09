@@ -7,24 +7,48 @@ jobs:
   debug:
     runs-on: ubuntu-latest
     steps:
-      - name: Testar busca de voo ida e volta
+      - name: Resolver GRU e MIA, depois testar busca
         env:
           KEY: ${{ secrets.RAPIDAPI_KEY }}
         run: |
+          echo "=== searchAirport GRU ==="
+          gru=$(curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
+            --data-urlencode "query=Sao Paulo Guarulhos" \
+            --data-urlencode "locale=en-US" \
+            -H "X-RapidAPI-Key: $KEY" \
+            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com")
+          echo "$gru" | head -c 800
+          echo
+          gru_sky=$(echo "$gru" | grep -o '"skyId":"[A-Z]*"' | head -1 | cut -d'"' -f4)
+          gru_entity=$(echo "$gru" | grep -o '"entityId":"[0-9]*"' | head -1 | cut -d'"' -f4)
+          echo "GRU parsed: skyId=$gru_sky entityId=$gru_entity"
+
+          echo "=== searchAirport MIA ==="
+          mia=$(curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
+            --data-urlencode "query=Miami" \
+            --data-urlencode "locale=en-US" \
+            -H "X-RapidAPI-Key: $KEY" \
+            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com")
+          echo "$mia" | head -c 800
+          echo
+          mia_sky=$(echo "$mia" | grep -o '"skyId":"[A-Z]*"' | head -1 | cut -d'"' -f4)
+          mia_entity=$(echo "$mia" | grep -o '"entityId":"[0-9]*"' | head -1 | cut -d'"' -f4)
+          echo "MIA parsed: skyId=$mia_sky entityId=$mia_entity"
+
+          echo "=== searchFlightsWebComplete GRU -> MIA ==="
           curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v2/flights/searchFlightsWebComplete" \
-            --data-urlencode "originSkyId=MAO" \
-            --data-urlencode "destinationSkyId=MCO" \
-            --data-urlencode "originEntityId=95674366" \
-            --data-urlencode "destinationEntityId=95674009" \
-            --data-urlencode "cabinClass=xxxinvalidxxx" \
+            --data-urlencode "originSkyId=$gru_sky" \
+            --data-urlencode "destinationSkyId=$mia_sky" \
+            --data-urlencode "originEntityId=$gru_entity" \
+            --data-urlencode "destinationEntityId=$mia_entity" \
+            --data-urlencode "cabinClass=economy" \
             --data-urlencode "adults=1" \
             --data-urlencode "sortBy=price_low" \
             --data-urlencode "currency=BRL" \
             --data-urlencode "market=BR" \
             --data-urlencode "countryCode=BR" \
             --data-urlencode "date=2026-10-15" \
-            --data-urlencode "returnDate=2026-10-25" \
             -H "X-RapidAPI-Key: $KEY" \
             -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
-            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 3000
+            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2500
           echo
