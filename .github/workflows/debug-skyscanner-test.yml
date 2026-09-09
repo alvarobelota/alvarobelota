@@ -1,0 +1,29 @@
+name: Debug Sky Scrapper API
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolver aeroportos e testar busca
+        env:
+          KEY: ${{ secrets.RAPIDAPI_KEY }}
+        run: |
+          echo "=== searchAirport: Manaus ==="
+          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
+            --data-urlencode "query=Manaus" \
+            --data-urlencode "locale=pt-BR" \
+            -H "X-RapidAPI-Key: $KEY" \
+            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
+            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2000
+          echo
+          echo "=== searchAirport: Orlando ==="
+          curl -s -G "https://sky-scrapper.p.rapidapi.com/api/v1/flights/searchAirport" \
+            --data-urlencode "query=Orlando" \
+            --data-urlencode "locale=pt-BR" \
+            -H "X-RapidAPI-Key: $KEY" \
+            -H "X-RapidAPI-Host: sky-scrapper.p.rapidapi.com" \
+            -w "\nHTTP_STATUS:%{http_code}\n" | head -c 2000
+          echo
