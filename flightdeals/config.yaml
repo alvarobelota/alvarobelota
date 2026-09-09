@@ -3,33 +3,31 @@
 origin: MAO               # Manaus (AM) - Aeroporto Eduardo Gomes
 currency: brl
 
-destinations:
-  - code: GRU
-    name: São Paulo
-    price_threshold_brl: 7000
-  - code: PTY
-    name: Panamá
-    price_threshold_brl: 7000
-  - code: SCL
-    name: Chile (Santiago)
-    price_threshold_brl: 7000
-  - code: MIA
-    name: Miami
-    price_threshold_brl: 7000
-  - code: MCO
-    name: Orlando
-    price_threshold_brl: 7000
-  - code: AUA
-    name: Aruba
-    price_threshold_brl: 7000
-  - code: CUR
-    name: Curaçao
-    price_threshold_brl: 7000
+destination:
+  code: MCO
+  name: Orlando
 
-date_range:
-  start: 2027-01-01
-  end: 2027-04-30
+# Janelas de data testadas (ida e volta ~10 dias, espalhadas de jan a abr/2027).
+# Cada janela = 1 chamada na SerpApi. Cota grátis é 100/mês, então mantemos
+# poucas janelas e frequência semanal (ver check_frequency_hours abaixo).
+date_windows:
+  - depart: 2027-01-01
+    return: 2027-01-11
+  - depart: 2027-01-15
+    return: 2027-01-25
+  - depart: 2027-02-01
+    return: 2027-02-11
+  - depart: 2027-02-15
+    return: 2027-02-25
+  - depart: 2027-03-01
+    return: 2027-03-11
+  - depart: 2027-03-15
+    return: 2027-03-25
+  - depart: 2027-04-01
+    return: 2027-04-11
+  - depart: 2027-04-15
+    return: 2027-04-25
 
-one_way: false             # ida e volta
+price_threshold_brl: 3800  # avisa quando achar ida-e-volta igual ou abaixo disso
 
-check_frequency_hours: 12  # 2x ao dia
+check_frequency_hours: 168  # 1x por semana (pra caber na cota gratis de 100/mes)

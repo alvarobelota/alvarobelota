@@ -4,14 +4,14 @@ App simples que busca passagens aéreas em oferta periodicamente e avisa por Tel
 
 ## Como funciona
 
-- Usa a **Data API da Travelpayouts** (gratuita) para consultar, para cada destino
-  configurado, o preço mais barato encontrado recentemente em cada dia de um mês.
-- Filtra pelo seu range de datas e pelo preço-alvo de cada destino, definidos em
-  `flightdeals/config.yaml`.
-- Quando encontra uma oferta nova (que ainda não foi avisada), manda uma mensagem
-  pro seu Telegram.
-- Guarda em `seen_deals.json` o que já foi notificado, pra não repetir o mesmo alerta
-  a cada execução.
+- Usa a **Google Flights API da SerpApi** — busca real (mesmo motor do Google Flights,
+  calcula conexões de verdade, ex: Manaus→Panamá→Orlando).
+- Testa um conjunto de janelas de data (ida + volta) definidas em
+  `flightdeals/config.yaml`, já que o plano grátis da SerpApi tem cota de 100
+  buscas/mês — não dá pra escanear cada dia do período individualmente.
+- Quando encontra uma oferta nova (preço dentro do teto, ainda não avisada), manda
+  uma mensagem pro seu Telegram.
+- Guarda em `seen_deals.json` o que já foi notificado, pra não repetir o mesmo alerta.
 
 ## Setup
 
@@ -20,11 +20,11 @@ App simples que busca passagens aéreas em oferta periodicamente e avisa por Tel
    pip install -r requirements.txt
    ```
 2. Copie `.env.example` para `.env` e preencha:
-   - `TRAVELPAYOUTS_TOKEN`: Profile → API token, em travelpayouts.com
+   - `SERPAPI_KEY`: sua chave em serpapi.com (conta grátis, sem cartão)
    - `TELEGRAM_BOT_TOKEN`: token dado pelo @BotFather ao criar seu bot
-   - `TELEGRAM_CHAT_ID`: seu chat_id no Telegram
+   - `TELEGRAM_CHAT_ID`: seu chat_id no Telegram (mande /start pro bot primeiro)
 3. Copie `flightdeals/config.example.yaml` para `flightdeals/config.yaml` e ajuste
-   origem, destinos (cada um com seu preço-alvo) e range de datas.
+   origem, destino, janelas de data e preço-alvo.
 4. Rode manualmente para testar:
    ```
    python -m flightdeals.main
@@ -34,21 +34,23 @@ App simples que busca passagens aéreas em oferta periodicamente e avisa por Tel
 
 Já vem configurado pra rodar sozinho via **GitHub Actions**
 (`.github/workflows/flight-deals.yml`), sem precisar de nada ligado no seu celular
-ou computador. Só falta cadastrar os 3 secrets no repositório (Settings → Secrets
-and variables → Actions):
+ou computador. Secrets necessários no repositório (Settings → Secrets and variables
+→ Actions):
 
-- `TRAVELPAYOUTS_TOKEN`
+- `SERPAPI_KEY`
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
 
 O workflow roda automaticamente no horário definido em `.github/workflows/flight-deals.yml`
-(padrão: 2x ao dia) e também pode ser disparado manualmente pela aba "Actions" do
-repositório no GitHub, clicando em "Run workflow".
+(padrão: 1x por semana, domingo) e também pode ser disparado manualmente pela aba
+"Actions" do repositório no GitHub, clicando em "Run workflow".
 
 ## Limitações importantes
 
-- A Data API da Travelpayouts é **cache**, não busca ao vivo — os preços refletem
-  buscas recentes de outros usuários, não uma cotação exata no momento. É ótima pra
-  "farejar" oferta, mas confirme o preço final no site antes de comprar.
-- A filtragem por duração exata da viagem (ex: "só viagens de 7 a 10 dias") não é
-  feita pela API diretamente; o app compara apenas a data de ida dentro do range.
+- O plano grátis da SerpApi dá **100 buscas/mês**. Cada janela de data em
+  `config.yaml` = 1 busca por execução do workflow. Com 8 janelas e execução
+  semanal, dá ~32 buscas/mês — dentro da cota, mas sem escanear todo dia do
+  período. Se quiser mais cobertura de datas, precisa reduzir a frequência ou
+  o número de janelas (ou assinar um plano pago da SerpApi).
+- Os preços são os que o Google Flights mostra no momento da busca — não são
+  garantidos até a compra.

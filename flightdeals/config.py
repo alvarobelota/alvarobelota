@@ -2,7 +2,6 @@
 
 import os
 from dataclasses import dataclass
-from datetime import date
 from pathlib import Path
 
 import yaml
@@ -12,22 +11,21 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 @dataclass
-class Destination:
-    code: str
-    name: str
-    price_threshold_brl: float
+class DateWindow:
+    depart: str
+    ret: str
 
 
 @dataclass
 class Settings:
     origin: str
+    destination: str
+    destination_name: str
     currency: str
-    destinations: list[Destination]
-    date_start: date
-    date_end: date
-    one_way: bool
+    date_windows: list[DateWindow]
+    price_threshold: float
     check_frequency_hours: int
-    travelpayouts_token: str
+    serpapi_key: str
     telegram_bot_token: str
     telegram_chat_id: str
 
@@ -45,12 +43,12 @@ def load_settings(config_path: Path | None = None) -> Settings:
     with open(config_path, encoding="utf-8") as f:
         raw = yaml.safe_load(f)
 
-    travelpayouts_token = os.environ.get("TRAVELPAYOUTS_TOKEN")
+    serpapi_key = os.environ.get("SERPAPI_KEY")
     telegram_bot_token = os.environ.get("TELEGRAM_BOT_TOKEN")
     telegram_chat_id = os.environ.get("TELEGRAM_CHAT_ID")
 
     missing = [name for name, val in [
-        ("TRAVELPAYOUTS_TOKEN", travelpayouts_token),
+        ("SERPAPI_KEY", serpapi_key),
         ("TELEGRAM_BOT_TOKEN", telegram_bot_token),
         ("TELEGRAM_CHAT_ID", telegram_chat_id),
     ] if not val]
@@ -60,15 +58,21 @@ def load_settings(config_path: Path | None = None) -> Settings:
             "(veja .env.example)."
         )
 
+    destination = raw["destination"]
+    date_windows = [
+        DateWindow(depart=str(w["depart"]), ret=str(w["return"]))
+        for w in raw["date_windows"]
+    ]
+
     return Settings(
         origin=raw["origin"],
+        destination=destination["code"],
+        destination_name=destination["name"],
         currency=raw.get("currency", "brl"),
-        destinations=[Destination(**d) for d in raw["destinations"]],
-        date_start=raw["date_range"]["start"],
-        date_end=raw["date_range"]["end"],
-        one_way=bool(raw.get("one_way", False)),
-        check_frequency_hours=int(raw.get("check_frequency_hours", 24)),
-        travelpayouts_token=travelpayouts_token,
+        date_windows=date_windows,
+        price_threshold=float(raw["price_threshold_brl"]),
+        check_frequency_hours=int(raw.get("check_frequency_hours", 168)),
+        serpapi_key=serpapi_key,
         telegram_bot_token=telegram_bot_token,
         telegram_chat_id=telegram_chat_id,
     )

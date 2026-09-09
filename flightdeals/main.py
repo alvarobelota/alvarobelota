@@ -1,119 +1,66 @@
-"""Busca periódica de passagens em oferta e alerta via Telegram.
+"""Busca periódica de passagens em oferta (ida e volta real) e alerta via Telegram.
 
 Uso:
     python -m flightdeals.main
 """
 
-from datetime import date
-
 from flightdeals.config import load_settings
 from flightdeals.notifier import TelegramNotifier
+from flightdeals.serpapi_client import SerpApiClient
 from flightdeals.state import deal_key, load_seen, save_seen
-from flightdeals.travelpayouts import TravelpayoutsClient
-
-
-def months_between(start: date, end: date) -> list[date]:
-    months = []
-    current = start.replace(day=1)
-    while current <= end:
-        months.append(current)
-        if current.month == 12:
-            current = current.replace(year=current.year + 1, month=1)
-        else:
-            current = current.replace(month=current.month + 1)
-    return months
-
-
-def cheapest_in_range(entries: list[dict], date_start: date, date_end: date) -> dict | None:
-    """Entre os trechos retornados, acha o mais barato com partida dentro do range."""
-    candidates = [
-        e for e in entries
-        if e.get("depart_date") and e.get("value") is not None
-        and date_start.isoformat() <= e["depart_date"] <= date_end.isoformat()
-    ]
-    if not candidates:
-        return None
-    return min(candidates, key=lambda e: e["value"])
 
 
 def run() -> None:
     settings = load_settings()
-    client = TravelpayoutsClient(settings.travelpayouts_token)
+    client = SerpApiClient(settings.serpapi_key)
     notifier = TelegramNotifier(settings.telegram_bot_token, settings.telegram_chat_id)
     seen = load_seen()
 
     found_deals = []
 
-    for destination in settings.destinations:
-        for month in months_between(settings.date_start, settings.date_end):
-            try:
-                outbound_entries = client.month_matrix(
-                    origin=settings.origin, destination=destination.code,
-                    month=month, currency=settings.currency,
-                )
-            except Exception as exc:
-                print(f"Erro consultando {settings.origin}->{destination.code} em {month}: {exc}")
-                continue
-
-            outbound = cheapest_in_range(outbound_entries, settings.date_start, settings.date_end)
-            if outbound is None:
-                continue
-
-            if settings.one_way:
-                total = outbound["value"]
-                inbound = None
-            else:
-                try:
-                    inbound_entries = client.month_matrix(
-                        origin=destination.code, destination=settings.origin,
-                        month=month, currency=settings.currency,
-                    )
-                except Exception as exc:
-                    print(f"Erro consultando {destination.code}->{settings.origin} em {month}: {exc}")
-                    continue
-
-                inbound = cheapest_in_range(inbound_entries, settings.date_start, settings.date_end)
-                if inbound is None:
-                    continue
-                total = outbound["value"] + inbound["value"]
-
-            if total > destination.price_threshold_brl:
-                continue
-
-            key = deal_key(
-                destination.code, outbound["depart_date"],
-                inbound["depart_date"] if inbound else None, total,
+    for window in settings.date_windows:
+        try:
+            itineraries = client.search_round_trip(
+                departure_id=settings.origin,
+                arrival_id=settings.destination,
+                outbound_date=window.depart,
+                return_date=window.ret,
+                currency=settings.currency,
             )
-            if key in seen:
-                continue
+        except Exception as exc:
+            print(f"Erro consultando {settings.origin}->{settings.destination} "
+                  f"({window.depart} / {window.ret}): {exc}")
+            continue
 
-            seen.add(key)
-            found_deals.append({
-                "destination": destination,
-                "outbound": outbound,
-                "inbound": inbound,
-                "total": total,
-            })
+        if not itineraries:
+            continue
+
+        cheapest = min(itineraries, key=lambda it: it["price"])
+        price = cheapest["price"]
+        if price > settings.price_threshold:
+            continue
+
+        key = deal_key(settings.destination, window.depart, window.ret, price)
+        if key in seen:
+            continue
+
+        seen.add(key)
+        found_deals.append({"window": window, "price": price, "itinerary": cheapest})
 
     if found_deals:
         for deal in found_deals:
-            dest = deal["destination"]
-            outbound = deal["outbound"]
+            window = deal["window"]
             msg_lines = [
-                f"✈️ *Oferta encontrada: {settings.origin} → {dest.name} ({dest.code})*",
-                f"Ida: {outbound['depart_date']} — {outbound['value']} {settings.currency.upper()}",
+                f"✈️ *Oferta encontrada: {settings.origin} → "
+                f"{settings.destination_name} ({settings.destination})*",
+                f"Ida: {window.depart}",
+                f"Volta: {window.ret}",
+                f"Preço (ida e volta): {deal['price']} {settings.currency.upper()}",
             ]
-            if deal["inbound"]:
-                inbound = deal["inbound"]
-                msg_lines.append(
-                    f"Volta: {inbound['depart_date']} — {inbound['value']} {settings.currency.upper()}"
-                )
-                msg_lines.append(
-                    f"Total estimado (ida + volta somadas): {deal['total']} {settings.currency.upper()}"
-                )
-            else:
-                msg_lines.append(f"Total: {deal['total']} {settings.currency.upper()}")
-            msg_lines.append("_(preços de trechos avulsos somados — confirme o valor real ao comprar)_")
+            legs = deal["itinerary"].get("flights", [])
+            stops = max(len(legs) - 1, 0)
+            if stops:
+                msg_lines.append(f"Conexões na ida: {stops}")
             notifier.send("\n".join(msg_lines))
         save_seen(seen)
         print(f"{len(found_deals)} oferta(s) nova(s) encontrada(s) e notificada(s).")

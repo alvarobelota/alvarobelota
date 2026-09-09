@@ -2,7 +2,7 @@ name: Flight deals check
 
 on:
   schedule:
-    - cron: "0 0,12 * * *" # 2x ao dia: 00:00 e 12:00 UTC (~20:00 e 08:00 em Manaus, UTC-4)
+    - cron: "0 11 * * 0" # 1x por semana, domingo 11:00 UTC (~08:00 em Manaus, UTC-4)
   workflow_dispatch: {}
 
 permissions:
@@ -23,7 +23,7 @@ jobs:
 
       - name: Buscar ofertas
         env:
-          TRAVELPAYOUTS_TOKEN: ${{ secrets.TRAVELPAYOUTS_TOKEN }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python -m flightdeals.main

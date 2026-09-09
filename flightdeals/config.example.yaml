@@ -3,18 +3,18 @@
 origin: GRU               # código IATA da origem (ex: GRU, GIG, MAO)
 currency: brl
 
-destinations:
-  - code: LIS
-    name: Lisboa
-    price_threshold_brl: 3000   # avisa quando achar ida-e-volta igual ou abaixo disso
-  - code: MAD
-    name: Madrid
-    price_threshold_brl: 3000
+destination:
+  code: LIS
+  name: Lisboa
 
-date_range:
-  start: 2026-10-01      # início do período em que você pode viajar
-  end: 2026-12-31        # fim do período
+# Janelas de data testadas (ida e volta). Cada janela = 1 chamada na SerpApi.
+# Cota grátis é 100/mês, então mantenha poucas janelas e frequência baixa.
+date_windows:
+  - depart: 2026-10-01
+    return: 2026-10-11
+  - depart: 2026-11-01
+    return: 2026-11-11
 
-one_way: false             # false = ida e volta, true = só ida
+price_threshold_brl: 3000  # avisa quando achar ida-e-volta igual ou abaixo disso
 
-check_frequency_hours: 24  # de quantas em quantas horas o app deve checar
+check_frequency_hours: 168  # de quantas em quantas horas o app deve checar
